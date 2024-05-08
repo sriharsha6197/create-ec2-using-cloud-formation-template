@@ -1,0 +1,89 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: First template to create s3 bucket
+Resources:
+  myVPC:
+    Type: 'AWS::EC2::VPC'
+    Properties: 
+      CidrBlock: 192.168.0.0/16
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      Tags:
+        - 
+          Key: name
+          Value: vpc-cft
+
+  myPublicSubnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties: 
+      VpcId: !Ref myVPC
+      CidrBlock: 192.168.1.0/24
+      AvailabilityZone: "us-east-1a"
+      MapPublicIpOnLaunch: 'true'
+      Tags:
+        -
+          Key: name
+          Value: public-subnet
+
+  mySUbnetAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref myRouteTable
+      SubnetId: !Ref myPublicSubnet
+  
+  myInternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - 
+          Key: name
+          Value: igw
+
+  myRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref myRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref myInternetGateway
+
+  AttachIGW:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref myVPC
+      InternetGatewayId: !Ref myInternetGateway
+
+  MyEC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId: "ami-0f3c7d07486cad139"
+      InstanceType: t2.micro
+      SubnetId: !Ref myPublicSubnet
+      AvailabilityZone: "us-east-1a"
+      SecurityGroupIds:
+        - !Ref mySG
+
+  myRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref myVPC
+
+  mySG:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: allow-traffic-to-the-instance
+      GroupName: security-group-for-instances
+      SecurityGroupIngress:
+        - IpProtocol: '-1'
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0
+
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref myVPC
